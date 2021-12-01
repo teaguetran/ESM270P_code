@@ -111,5 +111,5 @@ lulc_sep_2020$landcover_code[lulc_sep_2020$landcover_code == "shrub" ] <- 5
 #go from character class to numeric
 lulc_sep_2020$landcover_code <- as.numeric(lulc_sep_2020$landcover_code)
 
-st_write(lulc_sep_2020, "tcsi_landcover_2020.shp")
+st_write(lulc_sep_2020, "tcsi_landcover_2020.shp") 
 ```
