@@ -19,7 +19,6 @@ library(rgdal)
 ```
 ```{r}
 # read in raster for 2020
-#we are assuming that 2020 for BOTH scenarios and ALL replications are the same
 
 scenario_raster_scenario1_2020 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_v3_20210824_1050_0.tif"))
 
@@ -37,6 +36,7 @@ lulc_select <- scenario_vector_scenario1_2020
 lulc_sep_2020 <- lulc_select %>% 
   mutate(last_2 = lulc_select$gridcode %% 100) %>%
   mutate(first_two = substr(lulc_select$gridcode, 1, nchar(lulc_select$gridcode)-2 )) 
+
 #separate the number in the gridcode to create new columns
 lulc_sep_2020 <- lulc_sep_2020 %>% 
   mutate(second_last = substr(lulc_sep_2020$last_2, 1, 1) ) %>% 
@@ -46,54 +46,7 @@ lulc_sep_2020 <- lulc_sep_2020 %>%
   mutate(canopy_cover = first_last) %>% 
   mutate(ecoregion_type = as.numeric(forest_type)) 
 
-#make no values into 0 (should this be NA instead? It shows 0 as no values on the document, so I'm assuming this is ok)
-lulc_sep_2020$first_two[lulc_sep_2020$first_two == ""] <- 0
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == ""] <- 0
-
-#rename based on the document by TNC: Forest Type
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 0] <- "non-forested"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 1] <- "aspen"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 2] <- "montane_hardwood"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 3] <- "montane_riparian"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 4] <- "white_fir"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 5] <- "red_fir"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 6] <- "jeffrey_pine"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 7] <- "ponderosa_pine"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 8] <- "douglas-fir"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 9] <- "mixed_hardwood_conifer"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 10] <- "lodgepole_pine"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 11] <- "sierra_mixed_conifer"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 12] <- "sierra_high_elevation_mixed_conifer"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 13] <- "juniper"
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 14] <- "chapparal"
-
-#rename based on the document by TNC: Seral Stage
-lulc_sep_2020$seral_stage[lulc_sep_2020$seral_stage == 0] <- "NA"
-lulc_sep_2020$seral_stage[lulc_sep_2020$seral_stage == 1] <- "below_1"
-lulc_sep_2020$seral_stage[lulc_sep_2020$seral_stage == 2] <- "1-6"
-lulc_sep_2020$seral_stage[lulc_sep_2020$seral_stage == 3] <- "6-11"
-lulc_sep_2020$seral_stage[lulc_sep_2020$seral_stage == 4] <- "11-24"
-lulc_sep_2020$seral_stage[lulc_sep_2020$seral_stage == 5] <- "above_24"
-
-#rename based on the document by TNC: canopy cover
-lulc_sep_2020$canopy_cover[lulc_sep_2020$canopy_cover == 0] <- "0-10"
-lulc_sep_2020$canopy_cover[lulc_sep_2020$canopy_cover == 1] <- "10-25"
-lulc_sep_2020$canopy_cover[lulc_sep_2020$canopy_cover == 2] <- "25-40"
-lulc_sep_2020$canopy_cover[lulc_sep_2020$canopy_cover == 3] <- "40-60"
-lulc_sep_2020$canopy_cover[lulc_sep_2020$canopy_cover == 4] <- "60-100"
-
-#reclassify ecoregion_type as non-forest, hardwoods, conifer, or mixed     
-
-lulc_sep_2020$ecoregion_type[lulc_sep_2020$ecoregion_type == 0 ] <- "non-forest" 
-
-lulc_sep_2020$ecoregion_type[lulc_sep_2020$ecoregion_type== 14] <- "shrub"
-
-lulc_sep_2020$ecoregion_type[lulc_sep_2020$ecoregion_type == 1|lulc_sep_2020$ecoregion_type == 2] <- "hardwoods" 
-
-lulc_sep_2020$ecoregion_type[lulc_sep_2020$ecoregion_type == 4|lulc_sep_2020$ecoregion_type ==5|lulc_sep_2020$ecoregion_type ==6|lulc_sep_2020$ecoregion_type ==7|lulc_sep_2020$ecoregion_type ==8|lulc_sep_2020$ecoregion_type ==10|lulc_sep_2020$ecoregion_type ==11|lulc_sep_2020$ecoregion_type ==12|lulc_sep_2020$ecoregion_type == 13] <- "conifer" 
-
-lulc_sep_2020$ecoregion_type[lulc_sep_2020$ecoregion_type == 9 | lulc_sep_2020$ecoregion_type == 3] <- "mixed"
-
+#make no values into 0; will need to change for GP analysis
 #create land use cover code based on 1 = nonforest, 2 = conifer, 3 = hardwood, 4 = mixed, 5 = shrub
 lulc_sep_2020 <- lulc_sep_2020 %>% 
   mutate(landcover_code = ecoregion_type) 
@@ -108,8 +61,12 @@ lulc_sep_2020$landcover_code[lulc_sep_2020$landcover_code == "mixed" ] <- 4
 
 lulc_sep_2020$landcover_code[lulc_sep_2020$landcover_code == "shrub" ] <- 5
 
-#go from character class to numeric
+#change class to numeric to wrangle data
 lulc_sep_2020$landcover_code <- as.numeric(lulc_sep_2020$landcover_code)
 
-st_write(lulc_sep_2020, "tcsi_landcover_2020.shp") 
-```
+#change 0-10% canopy cover to non-forested ecoregion; used numbers cuz I changed it to numeric; 0-10% canopy cover does not count!
+
+lulc_sep_2020$landcover_code <- with(lulc_sep_2020, ifelse(lulc_sep_2020$canopy_cover == "0-10", lulc_sep_2020$landcover_code/lulc_sep_2020$landcover_code, lulc_sep_2020$landcover_code*1))
+  
+#write it out into shape file!
+st_write(lulc_sep_2020, "tcsi_landcover_2020.shp")
