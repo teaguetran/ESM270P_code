@@ -70,3 +70,4 @@ lulc_sep_2020$landcover_code <- with(lulc_sep_2020, ifelse(lulc_sep_2020$canopy_
   
 #write it out into shape file!
 st_write(lulc_sep_2020, "tcsi_landcover_2020.shp")
+```
