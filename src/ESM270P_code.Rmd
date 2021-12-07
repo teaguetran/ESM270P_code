@@ -49,8 +49,6 @@ lulc_sep_2020 <- lulc_sep_2020 %>%
 #make no values into 0; will need to change for GP analysis
 lulc_sep_2020$first_two[lulc_sep_2020$first_two == ""] <- 0
 lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == ""] <- 0
-
-
 ```
 ```{r}
 #reclassify land use to create new land cover code
