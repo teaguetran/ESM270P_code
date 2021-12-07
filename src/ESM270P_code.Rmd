@@ -61,11 +61,12 @@ lulc_sep_2020$landcover_code[lulc_sep_2020$landcover_code == "mixed" ] <- 4
 
 lulc_sep_2020$landcover_code[lulc_sep_2020$landcover_code == "shrub" ] <- 5
 
-
-#make no values into 0 (should this be NA instead? It shows 0 as no values on the document, so I'm assuming this is ok)
+#make no values into 0 
 lulc_sep_2020$first_two[lulc_sep_2020$first_two == ""] <- 0
 lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == ""] <- 0
-
+```
+```{r}
+#reclassify land use to create new land cover code
 #rename based on the document by TNC: Forest Type
 lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 0] <- "non-forested"
 lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == 1] <- "aspen"
