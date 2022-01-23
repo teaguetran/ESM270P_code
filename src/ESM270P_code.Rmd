@@ -45,10 +45,6 @@ lulc_sep_2020 <- lulc_sep_2020 %>%
   mutate(seral_stage = second_last) %>% 
   mutate(canopy_cover = first_last) %>% 
   mutate(ecoregion_type = as.numeric(forest_type)) #ecoregion type will be the reclassified column of forest types
-
-#make no values into 0; will need to change for GP analysis
-lulc_sep_2020$first_two[lulc_sep_2020$first_two == ""] <- 0
-lulc_sep_2020$forest_type[lulc_sep_2020$forest_type == ""] <- 0
 ```
 ```{r}
 #reclassify land use to create new land cover code
@@ -107,5 +103,5 @@ lulc_sep_2020$landcover_code[lulc_sep_2020$landcover_code == "shrub" ] <- 5
 
 
 #write it out into shape file!
-st_write(lulc_sep_2020, "tcsi_landcover_2020.shp")
+st_write(lulc_sep_2020, "tcsi_landcover_2020_no0s.shp")
 ```
