@@ -1,0 +1,244 @@
+---
+title: "scenario_diff_2060"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(sf)
+library(here)
+library(stars)
+library(rgdal)
+library(tidyverse)
+library(tmap)
+library(maptools)
+```
+
+```{r}
+
+#create function to separate gridcode
+lulc_num <- function(lulc_select) {
+  lulc_sep <- lulc_select %>% 
+    mutate(last_2 = lulc_select$gridcode %% 100) %>%
+    mutate(first_two = substr(lulc_select$gridcode, 1, nchar(lulc_select$gridcode)-2 )) 
+  
+#separate the number in the gridcode to create new columns
+  lulc_sep <- lulc_sep %>% 
+    mutate(second_last = substr(lulc_sep$last_2, 1, 1) ) %>% 
+    mutate(first_last = lulc_select$gridcode %% 10) %>% 
+    mutate(forest_type = first_two) %>% 
+    mutate(seral_stage = second_last) %>% 
+    mutate(canopy_cover = first_last) %>% 
+    mutate(ecoregion_type = as.numeric(forest_type))
+}
+```
+
+```{r}
+#function to join two lulc data and find cell difference 
+
+lulc_difference <- function(lulc_2020, lulc_projected) {
+  lulc_join <- st_join(x = lulc_2020, y = lulc_projected, left = TRUE, largest = TRUE) %>% 
+  mutate(forest_type_diff = as.numeric(forest_type.y) - as.numeric(forest_type.x)) %>% 
+  mutate(canopy_cover_diff = as.numeric(canopy_cover.y) - as.numeric(canopy_cover.x)) %>% 
+  mutate(cell_diff = ifelse(as.numeric(canopy_cover_diff) == 0 | as.numeric(forest_type_diff) == 0, 0, 1))
+}
+```
+
+```{r}
+# read in raster for 2020
+#we are assuming that 2020 for BOTH scenarios and ALL replications are the same
+
+scenario_raster_scenario1_2020 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_v3_20210824_1050_0.tif"))
+
+#vectorize raster to be able to perform the habitat quality table fix
+scenario_vector_scenario1_2020 <- st_as_sf(scenario_raster_scenario1_2020[1], merge = FALSE, as_points = F)
+#set crs to NAD83 UTM zone 10
+st_crs(scenario_vector_scenario1_2020) <- 3310
+#set column names to grid code and geometry
+colnames(scenario_vector_scenario1_2020) <- c("gridcode", "geometry")
+```
+
+
+```{r}
+#use the habitat quality table fix on this stuff to get separate codes
+#create new columns for gridcode
+lulc_select_2020 <- scenario_vector_scenario1_2020
+
+lulc_2020 <- lulc_num(lulc_select_2020)
+
+lulc_2020 <- lulc_select_2020 %>%
+  mutate(last_2 = lulc_select_2020$gridcode %% 100) %>%
+  mutate(first_two = substr(lulc_select_2020$gridcode, 1, nchar(lulc_select_2020$gridcode)-2 ))
+#separate the number in the gridcode to create new columns
+lulc_2020 <- lulc_2020 %>%
+  mutate(second_last = substr(lulc_2020$last_2, 1, 1) ) %>%
+  mutate(first_last = lulc_select_2020$gridcode %% 10) %>%
+  mutate(forest_type = first_two) %>%
+  mutate(seral_stage = second_last) %>%
+  mutate(canopy_cover = first_last) %>%
+  mutate(ecoregion_type = as.numeric(forest_type))
+```
+
+
+```{r}
+# read in raster for 2060
+#we are assuming that 2060 for BOTH scenarios and ALL replications are the same
+
+scenario_raster_scenario1_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario1_v3_20210824_1050_40.tif"))
+
+#vectorize raster to be able to perform the habitat quality table fix
+scenario_vector_scenario1_2060 <- st_as_sf(scenario_raster_scenario1_2060[1], merge = FALSE, as_points = F)
+#set crs to NAD83 UTM zone 10
+st_crs(scenario_vector_scenario1_2060) <- 3310
+#set column names to grid code and geometry
+colnames(scenario_vector_scenario1_2060) <- c("gridcode", "geometry")
+
+#use the habitat quality table fix on this stuff to get separate codes
+#create new columns for gridcode
+lulc_select_2060 <- scenario_vector_scenario1_2060
+
+lulc_2060 <- lulc_num(lulc_select_2060)
+```
+
+
+```{r}
+merged = scenario_raster_scenario1_2020*10000  + scenario_raster_scenario1_2060
+merged = st_as_sf(merged)
+colnames(merged) <- c("gridcodes", "geometry")
+merged$gridcodes = sprintf('%08d', merged$gridcodes)
+merged = mutate(merged, gridcode_2020 = substr(merged$gridcodes, 1, 4))
+merged = mutate(merged, gridcode_2060 = substr(merged$gridcodes, 5, 8))
+
+```
+
+```{r}
+#parse out code for "new" column
+merged_lulc <- merged %>% 
+  mutate(forest_type_2020 = substr(gridcode_2020, 1, nchar(gridcode_2020)-2)) %>% 
+  mutate(canopy_cover_2020 = as.numeric(gridcode_2020) %% 10) %>% 
+  mutate(forest_type_2060 = substr(gridcode_2060, 1, nchar(gridcode_2060)-2)) %>% 
+  mutate(canopy_cover_2060 = as.numeric(gridcode_2060) %% 10) %>% 
+  mutate(forest_diff = as.numeric(forest_type_2060) - as.numeric(forest_type_2020)) %>% 
+  mutate(canopy_diff = canopy_cover_2060 - canopy_cover_2020) %>% 
+  mutate(cell_diff = ifelse(as.numeric(canopy_diff) == 0 & as.numeric(forest_diff) == 0, 0, 1))
+
+
+#parse out code for "new" column
+lulc_parse <- function(lulc_merged) {
+  lulc_sep <- lulc_merged %>% 
+    mutate(forest_type_2020 = substr(lulc_select$gridcode_2020, 1, nchar(lulc_select$gridcode_2020)-2))
+}
+
+
+lulc_num <- function(lulc_select) {
+  lulc_sep <- lulc_select %>% 
+    mutate(last_2 = lulc_select$gridcode %% 100) %>%
+    mutate(first_two = substr(lulc_select$gridcode, 1, nchar(lulc_select$gridcode)-2 )) 
+  
+#separate the number in the gridcode to create new columns
+  lulc_sep <- lulc_sep %>% 
+    mutate(second_last = substr(lulc_sep$last_2, 1, 1) ) %>% 
+    mutate(first_last = lulc_select$gridcode %% 10) %>% 
+    mutate(forest_type = first_two) %>% 
+    mutate(seral_stage = second_last) %>% 
+    mutate(canopy_cover = first_last) %>% 
+    mutate(ecoregion_type = as.numeric(forest_type))
+}
+```
+
+
+
+
+
+
+```{r}
+first1000_2020 <-  lulc_2020[1:2000,]
+
+first1000_2060 <- lulc_2060[1:1000,]
+
+first1000_join <- st_join(x = first1000_2020, y = first1000_2060, left = TRUE, largest = TRUE)
+
+first1000_intersection <-  st_intersection(lulc_2020, st_union(lulc_2060))
+                                           
+first1000_join
+
+first1000_subtract <- first1000_join %>% 
+  mutate(forest_type_diff = as.numeric(forest_type.y) - as.numeric(forest_type.x)) %>% 
+  mutate(canopy_cover_diff = as.numeric(canopy_cover.y) - as.numeric(canopy_cover.x)) %>% 
+  mutate(cell_diff = ifelse(as.numeric(canopy_cover_diff) == 0 & as.numeric(forest_type_diff) == 0, 0, 1))
+
+test_difference <-  lulc_difference(first1000_2020, first1000_2060)
+                        
+
+testing_merge <- merge(lulc_2020, lulc_2060, by = "geometry", all = TRUE)
+
+test_join <- st_join(x = lulc_2020, y = lulc_2060, largest = TRUE)
+
+test_join_left <- st_join(x = lulc_2020, y = lulc_2060, join = st_intersects, left = TRUE, largest = FALSE)
+
+test_intersection <- st_intersection(lulc_2020, st_union(lulc_2060))
+
+test_contain <- st_overlaps(x = lulc_2060, y = lulc_2020, sparse = TRUE)
+
+test_contains <- st_contains(x = lulc_2060, y = lulc_2020, sparse = TRUE)
+
+test_contains_2020_2060 <- st_contains(x = lulc_2020, y = lulc_2060, sparse = TRUE )
+
+colSums(is.na(test_difference))
+
+
+#let's try extracting the dataframe only to make it move faster
+
+df_2020 <- data.frame(lulc_2020, extract(gridcode, forest_type, canopy_cover, geometry))
+
+df_2020 <- fortify(lulc_2020)
+
+df_2060 <- fortify(lulc_2060)
+
+
+df_2020_2060 <- merge(lulc_2020, lulc_2060, by.x = "geometry", by.y = "geometry")
+                   
+test_diff_2 <- lulc_difference(lulc_2020, lulc_2060)
+
+
+test_display <- tm_shape(test_difference) +
+  tm_borders() +
+  tm_polygons(col = "cell_diff", title = "")
+
+test_display
+
+
+ggplot() + 
+  geom_sf(data = test_contain)
+
+ggplot()+
+  geom_sf(data = lulc_2060)
+```
+
+```{r}
+ggplot() + 
+  geom_sf(data = lulc_2020)
+```
+
+
+
+```{r}
+#create function to find the difference between 2020 and 2060; remember to do BOTH forest type AND canopy cover
+# lulc_difference <- function(lulc_2060, lulc_2020){
+#   intersect(lulc_2060$geometry, lulc_2020$geometry)
+# }
+
+
+#let's do it without trying to make a function first
+
+
+
+  
+```
+
+
+
+

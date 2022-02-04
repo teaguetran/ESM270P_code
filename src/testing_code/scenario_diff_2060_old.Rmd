@@ -32,7 +32,7 @@ colnames(scenario_vector_scenario1_2020) <- c("gridcode", "geometry")
 
 ```{r}
 #read in raster for 2060
-scenario_raster_scenario1_2060 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_v3_20210824_1050_40.tif"))
+scenario_raster_scenario1_2060 <-  read_stars(here("data", "2060", "cwhr_MIROC5_85_Scenario1_v3_20210824_1050_40.tif"))
 
 #vectorize raster to be able to perform the habitat quality table fix
 scenario_vector_scenario1_2060 <- st_as_sf(scenario_raster_scenario1_2060[1], merge = FALSE, as_points = F)
@@ -71,7 +71,7 @@ different_cells <- difference_dataframe %>%
   filter(difference_dataframe != 0)
 #add to the dataframe that started with difference_df
 difference_df_2 <- nrow(different_cells)
-  
+
 difference_new <- rbind(difference_df, difference_df_2)
 ```
 
@@ -492,7 +492,6 @@ difference_new <- rbind(difference_new, difference_df_2)
 ```
 
 
-# This is has the most cell differences
 ```{r}
 #read in raster for 2060
 scenario_raster_scenario1_2060 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_v3_20210827_1748_40.tif"))
