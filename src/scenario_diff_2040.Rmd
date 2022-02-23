@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 raster_2020<-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_v3_20210824_1050_0.tif"))
+raster_2020s6<-  read_stars(here("data", "cwhr_MIROC5_85_Scenario6_v3_20210820_1301_0.tif"))
 raster_2040 <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario1_v3_20210824_1050_20.tif"))
 ```
 

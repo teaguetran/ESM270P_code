@@ -10,7 +10,17 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+library(sf)
+library(here)
+library(tidyverse)
+library(janitor)
+library(stars)
+library(rgdal)
+```
+
+```{r}
 raster_2020<-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_v3_20210824_1050_0.tif"))
+raster_2020s6<-  read_stars(here("data", "cwhr_MIROC5_85_Scenario6_v3_20210820_1301_0.tif"))
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario1_v3_20210824_1050_40.tif"))
 ```
 
@@ -212,161 +222,161 @@ min(diff_sum)
 #load another 2060 raster 1
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1301_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6 <- sum(output$cell_diff)
 
 
 #load another 2060 raster 2
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1302_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 3
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1303_40.tif")) # this is the minimum for 2060 s6
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 4
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1306_40.tif")) # this is the maximum for 2060 s6
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 5
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1307_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 6
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1308_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 7
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1309_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 8
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210821_1212_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 9
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210821_1213_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 10
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210821_1214_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 11
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210821_1215_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 12
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210821_1217_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 13
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210821_1218_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 14
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210821_1219_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 15 
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210822_2123_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 16
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210822_2124_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 17
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210822_2125_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 18
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210822_2127_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 19
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210822_2128_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 20
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210827_1746_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 21
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210828_1645_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 22
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210828_1646_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 
 #load another 2060 raster 23
 raster_2060 <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210828_1648_40.tif"))
 #perform function
-output <- merge_function(raster_2020, raster_2060)
+output <- merge_function(raster_2020s6, raster_2060)
 diff_sum_2060s6_new <- sum(output$cell_diff)
 diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 ```
@@ -374,104 +384,4 @@ diff_sum_2060s6 <- rbind(diff_sum_2060s6, diff_sum_2060s6_new)
 ```{r}
 max(diff_sum_2060s6)
 min(diff_sum_2060s6)
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```{r}
-#parse out code to make forest type and canopy cover column for 2020 and 2060 and then subtract
-lulc_parse <- function(merged) {
-  merged <- merged %>% 
-  mutate(forest_type_2020 = substr(gridcode_2020, 1, nchar(gridcode_2020)-2)) %>% #create forest type column for 2020 and 2060
-  mutate(canopy_cover_2020 = as.numeric(gridcode_2020) %% 10) %>% 
-  mutate(forest_type_2060 = substr(gridcode_2060, 1, nchar(gridcode_2060)-2)) %>% #create canopy cover column for 2020 and 2060 
-  mutate(canopy_cover_2060 = as.numeric(gridcode_2060) %% 10) %>% 
-  mutate(forest_diff = as.numeric(forest_type_2060) - as.numeric(forest_type_2020)) %>% #subtract canopy cover and forest type columns for 2020 and 2060
-  mutate(canopy_diff = canopy_cover_2060 - canopy_cover_2020) %>% 
-  mutate(cell_diff = ifelse(as.numeric(canopy_diff) == 0 & as.numeric(forest_diff) == 0, 0, 1)) #create new column where no change = 0 and ANY change = 1 
-}
-```
-
-```{r}
-landuse <- merge
-```
-
-
-
-
-
-
-
-```{r}
-#Niklas's code
-# merged = scenario_raster_scenario1_2020*10000  + scenario_raster_scenario1_2060
-# merged = st_as_sf(merged)
-# colnames(merged) <- c("gridcodes", "geometry")
-# merged$gridcodes = sprintf('%08d', merged$gridcodes)
-# merged = mutate(merged, gridcode_2020 = substr(merged$gridcodes, 1, 4))
-# merged = mutate(merged, gridcode_2060 = substr(merged$gridcodes, 5, 8))
-
-```
-
-```{r}
-#parse out code for "new" column
-merged_lulc <- merged %>% 
-  mutate(forest_type_2020 = substr(gridcode_2020, 1, nchar(gridcode_2020)-2)) %>% 
-  mutate(canopy_cover_2020 = as.numeric(gridcode_2020) %% 10) %>% 
-  mutate(forest_type_2060 = substr(gridcode_2060, 1, nchar(gridcode_2060)-2)) %>% 
-  mutate(canopy_cover_2060 = as.numeric(gridcode_2060) %% 10) %>% 
-  mutate(forest_diff = as.numeric(forest_type_2060) - as.numeric(forest_type_2020)) %>% 
-  mutate(canopy_diff = canopy_cover_2060 - canopy_cover_2020) %>% 
-  mutate(cell_diff = ifelse(as.numeric(canopy_diff) == 0 & as.numeric(forest_diff) == 0, 0, 1))
-
-
-
-
-
-
-
-lulc_num <- function(lulc_select) {
-  lulc_sep <- lulc_select %>% 
-    mutate(last_2 = lulc_select$gridcode %% 100) %>%
-    mutate(first_two = substr(lulc_select$gridcode, 1, nchar(lulc_select$gridcode)-2 )) 
-  
-#separate the number in the gridcode to create new columns
-  lulc_sep <- lulc_sep %>% 
-    mutate(second_last = substr(lulc_sep$last_2, 1, 1) ) %>% 
-    mutate(first_last = lulc_select$gridcode %% 10) %>% 
-    mutate(forest_type = first_two) %>% 
-    mutate(seral_stage = second_last) %>% 
-    mutate(canopy_cover = first_last) %>% 
-    mutate(ecoregion_type = as.numeric(forest_type))
-}
 ```
