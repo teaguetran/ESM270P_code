@@ -1,0 +1,547 @@
+---
+title: "all_one_landcover"
+author: "Teague Tran"
+date: "3/1/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE) 
+```
+
+```{r}
+library(sf)
+library(here)
+library(tidyverse)
+library(janitor)
+library(stars)
+library(rgdal)
+library(raster)
+```
+```{r}
+# read in raster for 2020
+
+raster_scenario1_2020 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_v3_20210824_1050_0.tif"))
+
+#scenario 1
+
+raster_2040s1_min <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario1_v3_20210826_2000_20.tif")) #minimum for 2040 scen 1
+
+raster_2040s1_max <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario1_v3_20210826_1934_20.tif")) #maximum for 2040 scen 1
+
+raster_2060s1_min <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario1_v3_20210825_1259_40.tif")) # min for 2060 scen 1
+
+raster_2060s1_max <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario1_v3_20210824_1052_40.tif")) # max for 2060 scen 1
+
+#Scenario 6
+
+raster_2040s6_min <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario6_v3_20210821_1215_20.tif")) #minimum for 2040 scen 6
+
+raster_2040s6_max <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario6_v3_20210821_1219_20.tif")) #maximum for 2040 scen 6
+
+raster_2060s6_min <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1303_40.tif")) # this is the minimum for 2060 s6
+
+raster_2060s6_max <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1306_40.tif")) # this is the maximum for 2060 s6
+
+```
+
+```{r}
+lulc_parse <-  function(raw_raster) {
+  #vectorize raster to be able to perform the habitat quality table fix
+lulc_vector <- st_as_sf(raw_raster[1], merge = FALSE, as_points = F)
+#set crs to NAD83 UTM zone 10
+st_crs(lulc_vector) <- 3310
+#set column names to grid code and geometry
+colnames(lulc_vector) <- c("gridcode", "geometry")
+
+#put scenario vector into lulc_select to be able to break apart lulc code 
+lulc_select <- lulc_vector
+
+#let's break apart landuse stuff 
+lulc_sep <- lulc_select %>% 
+  mutate(last_2 = lulc_select$gridcode %% 100) %>%
+  mutate(first_two = substr(lulc_select$gridcode, 1, nchar(lulc_select$gridcode)-2 )) 
+
+#separate the number in the gridcode to create new columns
+lulc_sep <- lulc_sep %>% 
+  mutate(second_last = substr(lulc_sep$last_2, 1, 1) ) %>% 
+  mutate(first_last = lulc_select$gridcode %% 10) %>% 
+  mutate(forest_type = as.numeric(first_two)) %>% 
+  mutate(seral_stage = second_last) %>% 
+  mutate(canopy_cover = first_last) %>% 
+  mutate(ecoregion_type = as.numeric(forest_type)) #ecoregion type will be the reclassified column of forest types
+  
+#reclassify land use to create new land cover code
+#rename based on the document by TNC: Forest Type
+lulc_sep$forest_type[lulc_sep$forest_type == 0] <- "non-forested"
+lulc_sep$forest_type[lulc_sep$forest_type == 1] <- "aspen"
+lulc_sep$forest_type[lulc_sep$forest_type == 2] <- "montane_hardwood"
+lulc_sep$forest_type[lulc_sep$forest_type == 3] <- "montane_riparian"
+lulc_sep$forest_type[lulc_sep$forest_type == 4] <- "white_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 5] <- "red_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 6] <- "jeffrey_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 7] <- "ponderosa_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 8] <- "douglas-fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 9] <- "mixed_hardwood_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 10] <- "lodgepole_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 11] <- "sierra_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 12] <- "sierra_high_elevation_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 13] <- "juniper"
+lulc_sep$forest_type[lulc_sep$forest_type == 14] <- "chapparal"
+#rename based on the document by TNC: Seral Stage
+lulc_sep$seral_stage[lulc_sep$seral_stage == 0] <- "NA"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 1] <- "below_1"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 2] <- "1-6"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 3] <- "6-11"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 4] <- "11-24"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 5] <- "above_24"
+#rename based on the document by TNC: canopy cover
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 0] <- "0-10"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 1] <- "10-25"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 2] <- "25-40"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 3] <- "40-60"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 4] <- "60-100"
+
+#change 0-10% canopy cover to non-forested ecoregion; 0-10% canopy cover does not count as forest
+lulc_sep$ecoregion_type <- with(lulc_sep, ifelse(lulc_sep$canopy_cover == "0-10", lulc_sep$ecoregion_type * 0, lulc_sep$ecoregion_type*1))
+
+#reclassify ecoregion_type as non-forest, hardwoods, conifer, or mixed     
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 0 ] <- "non-forest" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type== 14] <- "shrub"
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 1|lulc_sep$ecoregion_type == 2] <- "hardwoods" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 4|lulc_sep$ecoregion_type ==5|lulc_sep$ecoregion_type ==6|lulc_sep$ecoregion_type ==7|lulc_sep$ecoregion_type ==8|lulc_sep$ecoregion_type ==10|lulc_sep$ecoregion_type ==11|lulc_sep$ecoregion_type ==12|lulc_sep$ecoregion_type == 13] <- "conifer" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 9 | lulc_sep$ecoregion_type == 3] <- "mixed"
+
+
+
+#create land use cover code based on 1 = nonforest, 2 = conifer, 3 = hardwood, 4 = mixed, 5 = shrub
+ lulc_sep <- lulc_sep %>%
+   mutate(landcover_code = ecoregion_type)
+lulc_sep$landcover_code[lulc_sep$landcover_code == "non-forest" ] <- 1
+
+lulc_sep$landcover_code[lulc_sep$landcover_code == "conifer" ] <- 2
+
+lulc_sep$landcover_code[lulc_sep$landcover_code == "hardwoods" ] <- 3
+
+lulc_sep$landcover_code[lulc_sep$landcover_code == "mixed" ] <- 4
+
+lulc_sep$landcover_code[lulc_sep$landcover_code == "shrub" ] <- 5
+
+lulc_sep
+}
+
+
+test <- lulc_parse(raster_scenario1_2020)
+```
+
+```{r}
+lulc_parse_nonforest <-  function(raw_raster) {
+  #vectorize raster to be able to perform the habitat quality table fix
+lulc_vector <- st_as_sf(raw_raster[1], merge = FALSE, as_points = F)
+#set crs to NAD83 UTM zone 10
+st_crs(lulc_vector) <- 3310
+#set column names to grid code and geometry
+colnames(lulc_vector) <- c("gridcode", "geometry")
+
+#put scenario vector into lulc_select to be able to break apart lulc code 
+lulc_select <- lulc_vector
+
+#let's break apart landuse stuff 
+lulc_sep <- lulc_select %>% 
+  mutate(last_2 = lulc_select$gridcode %% 100) %>%
+  mutate(first_two = substr(lulc_select$gridcode, 1, nchar(lulc_select$gridcode)-2 )) 
+
+#separate the number in the gridcode to create new columns
+lulc_sep <- lulc_sep %>% 
+  mutate(second_last = substr(lulc_sep$last_2, 1, 1) ) %>% 
+  mutate(first_last = lulc_select$gridcode %% 10) %>% 
+  mutate(forest_type = as.numeric(first_two)) %>% 
+  mutate(seral_stage = second_last) %>% 
+  mutate(canopy_cover = first_last) %>% 
+  mutate(ecoregion_type = as.numeric(forest_type)) #ecoregion type will be the reclassified column of forest types
+  
+#reclassify land use to create new land cover code
+#rename based on the document by TNC: Forest Type
+lulc_sep$forest_type[lulc_sep$forest_type == 0] <- "non-forested"
+lulc_sep$forest_type[lulc_sep$forest_type == 1] <- "aspen"
+lulc_sep$forest_type[lulc_sep$forest_type == 2] <- "montane_hardwood"
+lulc_sep$forest_type[lulc_sep$forest_type == 3] <- "montane_riparian"
+lulc_sep$forest_type[lulc_sep$forest_type == 4] <- "white_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 5] <- "red_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 6] <- "jeffrey_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 7] <- "ponderosa_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 8] <- "douglas-fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 9] <- "mixed_hardwood_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 10] <- "lodgepole_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 11] <- "sierra_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 12] <- "sierra_high_elevation_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 13] <- "juniper"
+lulc_sep$forest_type[lulc_sep$forest_type == 14] <- "chapparal"
+#rename based on the document by TNC: Seral Stage
+lulc_sep$seral_stage[lulc_sep$seral_stage == 0] <- "NA"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 1] <- "below_1"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 2] <- "1-6"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 3] <- "6-11"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 4] <- "11-24"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 5] <- "above_24"
+#rename based on the document by TNC: canopy cover
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 0] <- "0-10"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 1] <- "10-25"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 2] <- "25-40"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 3] <- "40-60"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 4] <- "60-100"
+
+#change 0-10% canopy cover to non-forested ecoregion; 0-10% canopy cover does not count as forest
+lulc_sep$ecoregion_type <- with(lulc_sep, ifelse(lulc_sep$canopy_cover == "0-10", lulc_sep$ecoregion_type * 0, lulc_sep$ecoregion_type*1))
+
+lulc_sep$ecoregion_type <- 0
+
+lulc_sep <- lulc_sep %>%  
+  mutate(ecoregion_type_code = ecoregion_type)
+  
+  
+#reclassify ecoregion_type as non-forest, hardwoods, conifer, or mixed     
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 0 ] <- "non-forest" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type== 14] <- "shrub"
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 1|lulc_sep$ecoregion_type == 2] <- "hardwoods" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 4|lulc_sep$ecoregion_type ==5|lulc_sep$ecoregion_type ==6|lulc_sep$ecoregion_type ==7|lulc_sep$ecoregion_type ==8|lulc_sep$ecoregion_type ==10|lulc_sep$ecoregion_type ==11|lulc_sep$ecoregion_type ==12|lulc_sep$ecoregion_type == 13] <- "conifer" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 9 | lulc_sep$ecoregion_type == 3] <- "mixed"
+
+
+lulc_sep
+}
+```
+
+```{r}
+lulc_parse_shrub <-  function(raw_raster) {
+  #vectorize raster to be able to perform the habitat quality table fix
+lulc_vector <- st_as_sf(raw_raster[1], merge = FALSE, as_points = F)
+#set crs to NAD83 UTM zone 10
+st_crs(lulc_vector) <- 3310
+#set column names to grid code and geometry
+colnames(lulc_vector) <- c("gridcode", "geometry")
+
+#put scenario vector into lulc_select to be able to break apart lulc code 
+lulc_select <- lulc_vector
+
+#let's break apart landuse stuff 
+lulc_sep <- lulc_select %>% 
+  mutate(last_2 = lulc_select$gridcode %% 100) %>%
+  mutate(first_two = substr(lulc_select$gridcode, 1, nchar(lulc_select$gridcode)-2 )) 
+
+#separate the number in the gridcode to create new columns
+lulc_sep <- lulc_sep %>% 
+  mutate(second_last = substr(lulc_sep$last_2, 1, 1) ) %>% 
+  mutate(first_last = lulc_select$gridcode %% 10) %>% 
+  mutate(forest_type = as.numeric(first_two)) %>% 
+  mutate(seral_stage = second_last) %>% 
+  mutate(canopy_cover = first_last) %>% 
+  mutate(ecoregion_type = as.numeric(forest_type)) #ecoregion type will be the reclassified column of forest types
+  
+#reclassify land use to create new land cover code
+#rename based on the document by TNC: Forest Type
+lulc_sep$forest_type[lulc_sep$forest_type == 0] <- "non-forested"
+lulc_sep$forest_type[lulc_sep$forest_type == 1] <- "aspen"
+lulc_sep$forest_type[lulc_sep$forest_type == 2] <- "montane_hardwood"
+lulc_sep$forest_type[lulc_sep$forest_type == 3] <- "montane_riparian"
+lulc_sep$forest_type[lulc_sep$forest_type == 4] <- "white_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 5] <- "red_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 6] <- "jeffrey_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 7] <- "ponderosa_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 8] <- "douglas-fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 9] <- "mixed_hardwood_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 10] <- "lodgepole_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 11] <- "sierra_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 12] <- "sierra_high_elevation_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 13] <- "juniper"
+lulc_sep$forest_type[lulc_sep$forest_type == 14] <- "chapparal"
+#rename based on the document by TNC: Seral Stage
+lulc_sep$seral_stage[lulc_sep$seral_stage == 0] <- "NA"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 1] <- "below_1"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 2] <- "1-6"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 3] <- "6-11"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 4] <- "11-24"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 5] <- "above_24"
+#rename based on the document by TNC: canopy cover
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 0] <- "0-10"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 1] <- "10-25"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 2] <- "25-40"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 3] <- "40-60"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 4] <- "60-100"
+
+#change 0-10% canopy cover to non-forested ecoregion; 0-10% canopy cover does not count as forest
+lulc_sep$ecoregion_type <- with(lulc_sep, ifelse(lulc_sep$canopy_cover == "0-10", lulc_sep$ecoregion_type * 0, lulc_sep$ecoregion_type*1))
+
+lulc_sep$ecoregion_type <- 14
+
+lulc_sep <- lulc_sep %>%  
+  mutate(ecoregion_type_code = ecoregion_type)
+  
+  
+#reclassify ecoregion_type as non-forest, hardwoods, conifer, or mixed     
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 0 ] <- "non-forest" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type== 14] <- "shrub"
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 1|lulc_sep$ecoregion_type == 2] <- "hardwoods" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 4|lulc_sep$ecoregion_type ==5|lulc_sep$ecoregion_type ==6|lulc_sep$ecoregion_type ==7|lulc_sep$ecoregion_type ==8|lulc_sep$ecoregion_type ==10|lulc_sep$ecoregion_type ==11|lulc_sep$ecoregion_type ==12|lulc_sep$ecoregion_type == 13] <- "conifer" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 9 | lulc_sep$ecoregion_type == 3] <- "mixed"
+
+
+lulc_sep
+}
+
+```
+
+```{r}
+lulc_parse_hardwoods <-  function(raw_raster) {
+  #vectorize raster to be able to perform the habitat quality table fix
+lulc_vector <- st_as_sf(raw_raster[1], merge = FALSE, as_points = F)
+#set crs to NAD83 UTM zone 10
+st_crs(lulc_vector) <- 3310
+#set column names to grid code and geometry
+colnames(lulc_vector) <- c("gridcode", "geometry")
+
+#put scenario vector into lulc_select to be able to break apart lulc code 
+lulc_select <- lulc_vector
+
+#let's break apart landuse stuff 
+lulc_sep <- lulc_select %>% 
+  mutate(last_2 = lulc_select$gridcode %% 100) %>%
+  mutate(first_two = substr(lulc_select$gridcode, 1, nchar(lulc_select$gridcode)-2 )) 
+
+#separate the number in the gridcode to create new columns
+lulc_sep <- lulc_sep %>% 
+  mutate(second_last = substr(lulc_sep$last_2, 1, 1) ) %>% 
+  mutate(first_last = lulc_select$gridcode %% 10) %>% 
+  mutate(forest_type = as.numeric(first_two)) %>% 
+  mutate(seral_stage = second_last) %>% 
+  mutate(canopy_cover = first_last) %>% 
+  mutate(ecoregion_type = as.numeric(forest_type)) #ecoregion type will be the reclassified column of forest types
+  
+#reclassify land use to create new land cover code
+#rename based on the document by TNC: Forest Type
+lulc_sep$forest_type[lulc_sep$forest_type == 0] <- "non-forested"
+lulc_sep$forest_type[lulc_sep$forest_type == 1] <- "aspen"
+lulc_sep$forest_type[lulc_sep$forest_type == 2] <- "montane_hardwood"
+lulc_sep$forest_type[lulc_sep$forest_type == 3] <- "montane_riparian"
+lulc_sep$forest_type[lulc_sep$forest_type == 4] <- "white_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 5] <- "red_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 6] <- "jeffrey_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 7] <- "ponderosa_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 8] <- "douglas-fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 9] <- "mixed_hardwood_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 10] <- "lodgepole_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 11] <- "sierra_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 12] <- "sierra_high_elevation_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 13] <- "juniper"
+lulc_sep$forest_type[lulc_sep$forest_type == 14] <- "chapparal"
+#rename based on the document by TNC: Seral Stage
+lulc_sep$seral_stage[lulc_sep$seral_stage == 0] <- "NA"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 1] <- "below_1"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 2] <- "1-6"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 3] <- "6-11"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 4] <- "11-24"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 5] <- "above_24"
+#rename based on the document by TNC: canopy cover
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 0] <- "0-10"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 1] <- "10-25"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 2] <- "25-40"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 3] <- "40-60"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 4] <- "60-100"
+
+#change 0-10% canopy cover to non-forested ecoregion; 0-10% canopy cover does not count as forest
+lulc_sep$ecoregion_type <- with(lulc_sep, ifelse(lulc_sep$canopy_cover == "0-10", lulc_sep$ecoregion_type * 0, lulc_sep$ecoregion_type*1))
+
+lulc_sep$ecoregion_type <- 1
+
+lulc_sep <- lulc_sep %>%  
+  mutate(ecoregion_type_code = ecoregion_type)
+  
+  
+#reclassify ecoregion_type as non-forest, hardwoods, conifer, or mixed     
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 0 ] <- "non-forest" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type== 14] <- "shrub"
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 1|lulc_sep$ecoregion_type == 2] <- "hardwoods" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 4|lulc_sep$ecoregion_type ==5|lulc_sep$ecoregion_type ==6|lulc_sep$ecoregion_type ==7|lulc_sep$ecoregion_type ==8|lulc_sep$ecoregion_type ==10|lulc_sep$ecoregion_type ==11|lulc_sep$ecoregion_type ==12|lulc_sep$ecoregion_type == 13] <- "conifer" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 9 | lulc_sep$ecoregion_type == 3] <- "mixed"
+
+
+lulc_sep
+}
+
+```
+
+```{r}
+lulc_parse_conifer <-  function(raw_raster) {
+  #vectorize raster to be able to perform the habitat quality table fix
+lulc_vector <- st_as_sf(raw_raster[1], merge = FALSE, as_points = F)
+#set crs to NAD83 UTM zone 10
+st_crs(lulc_vector) <- 3310
+#set column names to grid code and geometry
+colnames(lulc_vector) <- c("gridcode", "geometry")
+
+#put scenario vector into lulc_select to be able to break apart lulc code 
+lulc_select <- lulc_vector
+
+#let's break apart landuse stuff 
+lulc_sep <- lulc_select %>% 
+  mutate(last_2 = lulc_select$gridcode %% 100) %>%
+  mutate(first_two = substr(lulc_select$gridcode, 1, nchar(lulc_select$gridcode)-2 )) 
+
+#separate the number in the gridcode to create new columns
+lulc_sep <- lulc_sep %>% 
+  mutate(second_last = substr(lulc_sep$last_2, 1, 1) ) %>% 
+  mutate(first_last = lulc_select$gridcode %% 10) %>% 
+  mutate(forest_type = as.numeric(first_two)) %>% 
+  mutate(seral_stage = second_last) %>% 
+  mutate(canopy_cover = first_last) %>% 
+  mutate(ecoregion_type = as.numeric(forest_type)) #ecoregion type will be the reclassified column of forest types
+  
+#reclassify land use to create new land cover code
+#rename based on the document by TNC: Forest Type
+lulc_sep$forest_type[lulc_sep$forest_type == 0] <- "non-forested"
+lulc_sep$forest_type[lulc_sep$forest_type == 1] <- "aspen"
+lulc_sep$forest_type[lulc_sep$forest_type == 2] <- "montane_hardwood"
+lulc_sep$forest_type[lulc_sep$forest_type == 3] <- "montane_riparian"
+lulc_sep$forest_type[lulc_sep$forest_type == 4] <- "white_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 5] <- "red_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 6] <- "jeffrey_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 7] <- "ponderosa_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 8] <- "douglas-fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 9] <- "mixed_hardwood_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 10] <- "lodgepole_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 11] <- "sierra_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 12] <- "sierra_high_elevation_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 13] <- "juniper"
+lulc_sep$forest_type[lulc_sep$forest_type == 14] <- "chapparal"
+#rename based on the document by TNC: Seral Stage
+lulc_sep$seral_stage[lulc_sep$seral_stage == 0] <- "NA"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 1] <- "below_1"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 2] <- "1-6"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 3] <- "6-11"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 4] <- "11-24"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 5] <- "above_24"
+#rename based on the document by TNC: canopy cover
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 0] <- "0-10"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 1] <- "10-25"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 2] <- "25-40"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 3] <- "40-60"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 4] <- "60-100"
+
+#change 0-10% canopy cover to non-forested ecoregion; 0-10% canopy cover does not count as forest
+lulc_sep$ecoregion_type <- with(lulc_sep, ifelse(lulc_sep$canopy_cover == "0-10", lulc_sep$ecoregion_type * 0, lulc_sep$ecoregion_type*1))
+
+lulc_sep$ecoregion_type <- 4
+
+lulc_sep <- lulc_sep %>%  
+  mutate(ecoregion_type_code = ecoregion_type)
+  
+  
+#reclassify ecoregion_type as non-forest, hardwoods, conifer, or mixed     
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 0 ] <- "non-forest" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type== 14] <- "shrub"
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 1|lulc_sep$ecoregion_type == 2] <- "hardwoods" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 4|lulc_sep$ecoregion_type ==5|lulc_sep$ecoregion_type ==6|lulc_sep$ecoregion_type ==7|lulc_sep$ecoregion_type ==8|lulc_sep$ecoregion_type ==10|lulc_sep$ecoregion_type ==11|lulc_sep$ecoregion_type ==12|lulc_sep$ecoregion_type == 13] <- "conifer" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 9 | lulc_sep$ecoregion_type == 3] <- "mixed"
+
+
+lulc_sep
+}
+
+```
+
+```{r}
+lulc_parse_mixed <-  function(raw_raster) {
+  #vectorize raster to be able to perform the habitat quality table fix
+lulc_vector <- st_as_sf(raw_raster[1], merge = FALSE, as_points = F)
+#set crs to NAD83 UTM zone 10
+st_crs(lulc_vector) <- 3310
+#set column names to grid code and geometry
+colnames(lulc_vector) <- c("gridcode", "geometry")
+
+#put scenario vector into lulc_select to be able to break apart lulc code 
+lulc_select <- lulc_vector
+
+#let's break apart landuse stuff 
+lulc_sep <- lulc_select %>% 
+  mutate(last_2 = lulc_select$gridcode %% 100) %>%
+  mutate(first_two = substr(lulc_select$gridcode, 1, nchar(lulc_select$gridcode)-2 )) 
+
+#separate the number in the gridcode to create new columns
+lulc_sep <- lulc_sep %>% 
+  mutate(second_last = substr(lulc_sep$last_2, 1, 1) ) %>% 
+  mutate(first_last = lulc_select$gridcode %% 10) %>% 
+  mutate(forest_type = as.numeric(first_two)) %>% 
+  mutate(seral_stage = second_last) %>% 
+  mutate(canopy_cover = first_last) %>% 
+  mutate(ecoregion_type = as.numeric(forest_type)) #ecoregion type will be the reclassified column of forest types
+  
+#reclassify land use to create new land cover code
+#rename based on the document by TNC: Forest Type
+lulc_sep$forest_type[lulc_sep$forest_type == 0] <- "non-forested"
+lulc_sep$forest_type[lulc_sep$forest_type == 1] <- "aspen"
+lulc_sep$forest_type[lulc_sep$forest_type == 2] <- "montane_hardwood"
+lulc_sep$forest_type[lulc_sep$forest_type == 3] <- "montane_riparian"
+lulc_sep$forest_type[lulc_sep$forest_type == 4] <- "white_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 5] <- "red_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 6] <- "jeffrey_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 7] <- "ponderosa_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 8] <- "douglas-fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 9] <- "mixed_hardwood_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 10] <- "lodgepole_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 11] <- "sierra_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 12] <- "sierra_high_elevation_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 13] <- "juniper"
+lulc_sep$forest_type[lulc_sep$forest_type == 14] <- "chapparal"
+#rename based on the document by TNC: Seral Stage
+lulc_sep$seral_stage[lulc_sep$seral_stage == 0] <- "NA"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 1] <- "below_1"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 2] <- "1-6"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 3] <- "6-11"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 4] <- "11-24"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 5] <- "above_24"
+#rename based on the document by TNC: canopy cover
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 0] <- "0-10"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 1] <- "10-25"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 2] <- "25-40"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 3] <- "40-60"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 4] <- "60-100"
+
+#change 0-10% canopy cover to non-forested ecoregion; 0-10% canopy cover does not count as forest
+lulc_sep$ecoregion_type <- with(lulc_sep, ifelse(lulc_sep$canopy_cover == "0-10", lulc_sep$ecoregion_type * 0, lulc_sep$ecoregion_type*1))
+
+lulc_sep$ecoregion_type <- 3
+
+lulc_sep <- lulc_sep %>%  
+  mutate(ecoregion_type_code = ecoregion_type)
+  
+  
+#reclassify ecoregion_type as non-forest, hardwoods, conifer, or mixed     
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 0 ] <- "non-forest" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type== 14] <- "shrub"
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 1|lulc_sep$ecoregion_type == 2] <- "hardwoods" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 4|lulc_sep$ecoregion_type ==5|lulc_sep$ecoregion_type ==6|lulc_sep$ecoregion_type ==7|lulc_sep$ecoregion_type ==8|lulc_sep$ecoregion_type ==10|lulc_sep$ecoregion_type ==11|lulc_sep$ecoregion_type ==12|lulc_sep$ecoregion_type == 13] <- "conifer" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 9 | lulc_sep$ecoregion_type == 3] <- "mixed"
+
+
+lulc_sep
+}
+
+```
+
+```{r}
+#apply functions
+
+nonforest_only <- lulc_parse_nonforest(raster_scenario1_2020)
+shrub_only <- lulc_parse_shrub(raster_scenario1_2020)
+hardwoods_only <- lulc_parse_hardwoods(raster_scenario1_2020)
+conifer_only <- lulc_parse_conifer(raster_scenario1_2020)
+mixed_only <- lulc_parse_mixed(raster_scenario1_2020)
+
+
+st_write(nonforest_only, "nonforest_only.shp")
+st_write(shrub_only, "shrub_only.shp")
+st_write(hardwoods_only, "hardwoods_only.shp")
+st_write(conifer_only, "conifer_only.shp")
+st_write(mixed_only, "mixed_only.shp")
+```
+
