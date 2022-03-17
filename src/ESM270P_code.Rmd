@@ -23,25 +23,25 @@ library(raster)
 
 raster_scenario1_2020 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_v3_20210824_1050_0.tif"))
 
-#scenario 1
-
-raster_2040s1_min <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario1_v3_20210826_2000_20.tif")) #minimum for 2040 scen 1
-
-raster_2040s1_max <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario1_v3_20210826_1934_20.tif")) #maximum for 2040 scen 1
-
-raster_2060s1_min <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario1_v3_20210825_1259_40.tif")) # min for 2060 scen 1
-
-raster_2060s1_max <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario1_v3_20210824_1052_40.tif")) # max for 2060 scen 1
-
-#Scenario 6
-
-raster_2040s6_min <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario6_v3_20210821_1215_20.tif")) #minimum for 2040 scen 6
-
-raster_2040s6_max <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario6_v3_20210821_1219_20.tif")) #maximum for 2040 scen 6
-
-raster_2060s6_min <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1303_40.tif")) # this is the minimum for 2060 s6
-
-raster_2060s6_max <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1306_40.tif")) # this is the maximum for 2060 s6
+# #scenario 1
+# 
+# raster_2040s1_min <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario1_v3_20210826_2000_20.tif")) #minimum for 2040 scen 1
+# 
+# raster_2040s1_max <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario1_v3_20210826_1934_20.tif")) #maximum for 2040 scen 1
+# 
+# raster_2060s1_min <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario1_v3_20210825_1259_40.tif")) # min for 2060 scen 1
+# 
+# raster_2060s1_max <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario1_v3_20210824_1052_40.tif")) # max for 2060 scen 1
+# 
+# #Scenario 6
+# 
+# raster_2040s6_min <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario6_v3_20210821_1215_20.tif")) #minimum for 2040 scen 6
+# 
+# raster_2040s6_max <-  read_stars(here("data","2040", "cwhr_MIROC5_85_Scenario6_v3_20210821_1219_20.tif")) #maximum for 2040 scen 6
+# 
+# raster_2060s6_min <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1303_40.tif")) # this is the minimum for 2060 s6
+# 
+# raster_2060s6_max <-  read_stars(here("data","2060", "cwhr_MIROC5_85_Scenario6_v3_20210820_1306_40.tif")) # this is the maximum for 2060 s6
 
 ```
 
@@ -66,10 +66,11 @@ lulc_sep <- lulc_select %>%
 lulc_sep <- lulc_sep %>% 
   mutate(second_last = substr(lulc_sep$last_2, 1, 1) ) %>% 
   mutate(first_last = lulc_select$gridcode %% 10) %>% 
-  mutate(forest_type = as.numeric(first_two)) %>% 
+  mutate(forest_type_code = as.numeric(first_two)) %>% #keep this forest type as numbers
+  mutate(forest_type = as.numeric(forest_type_code)) %>%  #change this to have forest type name
   mutate(seral_stage = second_last) %>% 
   mutate(canopy_cover = first_last) %>% 
-  mutate(ecoregion_type = as.numeric(forest_type)) #ecoregion type will be the reclassified column of forest types
+  mutate(ecoregion_type = as.numeric(forest_type_code)) #ecoregion type will be the reclassified column of forest types
   
 #reclassify land use to create new land cover code
 #rename based on the document by TNC: Forest Type
@@ -112,18 +113,18 @@ lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 1|lulc_sep$ecoregion_type == 
 lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 4|lulc_sep$ecoregion_type ==5|lulc_sep$ecoregion_type ==6|lulc_sep$ecoregion_type ==7|lulc_sep$ecoregion_type ==8|lulc_sep$ecoregion_type ==10|lulc_sep$ecoregion_type ==11|lulc_sep$ecoregion_type ==12|lulc_sep$ecoregion_type == 13] <- "conifer" 
 lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 9 | lulc_sep$ecoregion_type == 3] <- "mixed"
 
-#create land use cover code based on 1 = nonforest, 2 = conifer, 3 = hardwood, 4 = mixed, 5 = shrub
+#create ecoregion type code column based on 1 = nonforest, 2 = conifer, 3 = hardwood, 4 = mixed, 5 = shrub
  lulc_sep <- lulc_sep %>%
-   mutate(landcover_code = ecoregion_type)
-lulc_sep$landcover_code[lulc_sep$landcover_code == "non-forest" ] <- 1
+   mutate(ecoregion_type_code = ecoregion_type)
+lulc_sep$ecoregion_type_code[lulc_sep$ecoregion_type_code == "non-forest" ] <- 1
 
-lulc_sep$landcover_code[lulc_sep$landcover_code == "conifer" ] <- 2
+lulc_sep$ecoregion_type_code[lulc_sep$ecoregion_type_code == "conifer" ] <- 2
 
-lulc_sep$landcover_code[lulc_sep$landcover_code == "hardwoods" ] <- 3
+lulc_sep$ecoregion_type_code[lulc_sep$ecoregion_type_code == "hardwoods" ] <- 3
 
-lulc_sep$landcover_code[lulc_sep$landcover_code == "mixed" ] <- 4
+lulc_sep$ecoregion_type_code[lulc_sep$ecoregion_type_code == "mixed" ] <- 4
 
-lulc_sep$landcover_code[lulc_sep$landcover_code == "shrub" ] <- 5
+lulc_sep$ecoregion_type_code[lulc_sep$ecoregion_type_code == "shrub" ] <- 5
 
 lulc_sep
 }
@@ -133,28 +134,28 @@ lulc_sep
 #use function on 2020 data
 lulc_parsed_2020 <- lulc_parse(raster_scenario1_2020)
 
-#use function on scen 1 data
-lulc_parsed_2040s1_min <- lulc_parse(raster_2040s1_min)
-lulc_parsed_2040s1_max <- lulc_parse(raster_2040s1_max)
-lulc_parsed_2060s1_min <- lulc_parse(raster_2060s1_min)
-lulc_parsed_2060s1_max <- lulc_parse(raster_2060s1_max)
-
-#use function on scen 6 data
-lulc_parsed_2040s6_min <- lulc_parse(raster_2040s6_min)
-lulc_parsed_2040s6_max <- lulc_parse(raster_2040s6_max)
-lulc_parsed_2060s6_min <- lulc_parse(raster_2060s6_min)
-lulc_parsed_2060s6_max <- lulc_parse(raster_2060s6_max)
-
-
-
-ld_cvr_2040s1_min <- rasterize(lulc_parsed_2040s1_min, field = landcover_code, fun = last, filename = "lulc_2040s1min_raster_no0s")
+# #use function on scen 1 data
+# lulc_parsed_2040s1_min <- lulc_parse(raster_2040s1_min)
+# lulc_parsed_2040s1_max <- lulc_parse(raster_2040s1_max)
+# lulc_parsed_2060s1_min <- lulc_parse(raster_2060s1_min)
+# lulc_parsed_2060s1_max <- lulc_parse(raster_2060s1_max)
+# 
+# #use function on scen 6 data
+# lulc_parsed_2040s6_min <- lulc_parse(raster_2040s6_min)
+# lulc_parsed_2040s6_max <- lulc_parse(raster_2040s6_max)
+# lulc_parsed_2060s6_min <- lulc_parse(raster_2060s6_min)
+# lulc_parsed_2060s6_max <- lulc_parse(raster_2060s6_max)
+# 
+# 
+# 
+# ld_cvr_2040s1_min <- rasterize(lulc_parsed_2040s1_min, field = ecoregion_type_code, fun = last, filename = "lulc_2040s1min_raster_no0s")
 ```
 
 
 
 ```{r}
 #write it out into shape file!
-# st_write(lulc_parsed_2020, "tcsi_landcover_2020_no0s.shp")
+st_write(lulc_parsed_2020, "tcsi_landcover_2020_no0s.shp")
 
 #scenario 1
 st_write(lulc_parsed_2040s1_min, "lulc_2040s1min_no0s.shp")
