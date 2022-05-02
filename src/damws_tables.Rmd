@@ -1,0 +1,165 @@
+---
+title: "Untitled"
+author: "Teague Tran"
+date: "3/15/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(tidyverse)
+library(janitor)
+library(here)
+library(kableExtra)
+
+options(scipen=999)
+```
+
+```{r}
+sedex_diff_2040s1_higher <-  read.csv(here("data", "sedexdiff_damws", "sedexdiff_damws_2040s1High.csv"))
+sedex_diff_2040s1_lower <- read.csv(here("data", "sedexdiff_damws", "sedexdiff_damws_2040s1Low.csv"))
+sedex_diff_2040s6_higher <-  read.csv(here("data", "sedexdiff_damws", "sedexdiff_damws_2040s6High.csv"))
+sedex_diff_2040s6_lower <- read.csv(here("data", "sedexdiff_damws", "sedexdiff_damws_2040s6Low.csv"))
+sedex_diff_2060s1_higher <-  read.csv(here("data", "sedexdiff_damws", "sedexdiff_damws_2060s1High.csv"))
+sedex_diff_2060s1_lower <- read.csv(here("data", "sedexdiff_damws", "sedexdiff_damws_2060s1Low.csv"))
+sedex_diff_2060s6_higher <-  read.csv(here("data", "sedexdiff_damws", "sedexdiff_damws_2060s6High.csv"))
+sedex_diff_2060s6_lower <- read.csv(here("data", "sedexdiff_damws", "sedexdiff_damws_2060s6Low.csv"))
+
+```
+
+```{r}
+process_function <- function(sedex_diff) {
+  sedex_diff_select <- sedex_diff %>% 
+    clean_names() %>% 
+    select(ws_id, dam_waters, area_km2, area_acres, gridcode) %>% 
+    filter(area_km2 > 0) %>% 
+    distinct(ws_id, .keep_all = TRUE) 
+}
+
+```
+
+```{r}
+#apply functions
+sedex_diff_2040s1_higher <-  process_function(sedex_diff_2040s1_higher)
+sedex_diff_2040s1_lower <-  process_function(sedex_diff_2040s1_lower)
+sedex_diff_2040s6_higher <-  process_function(sedex_diff_2040s6_higher)
+sedex_diff_2040s6_lower <-  process_function(sedex_diff_2040s6_lower)
+sedex_diff_2060s1_higher <-  process_function(sedex_diff_2060s1_higher)
+sedex_diff_2060s1_lower <-  process_function(sedex_diff_2060s1_lower)
+sedex_diff_2060s6_higher <-  process_function(sedex_diff_2060s6_higher)
+sedex_diff_2060s6_lower <-  process_function(sedex_diff_2060s6_lower)
+```
+
+```{r}
+
+#select for 
+#selected_diff_2040s1_higher <-  process_function(sedex_diff_2040s1_higher) #keep to have extra info
+selected_diff_2040s1_lower <- sedex_diff_2040s1_lower %>% 
+  select(ws_id, gridcode) %>% 
+  group_by(ws_id)
+selected_diff_2040s6_higher <- sedex_diff_2040s6_higher %>% 
+  select(ws_id, gridcode)  %>% 
+  group_by(ws_id)
+selected_diff_2040s6_lower <- sedex_diff_2040s6_lower %>% 
+  select(ws_id, gridcode)  %>% 
+  group_by(ws_id)
+selected_diff_2060s1_higher <- sedex_diff_2060s1_higher %>% 
+  select(ws_id, gridcode)  %>% 
+  group_by(ws_id)
+selected_diff_2060s1_lower <- sedex_diff_2060s1_lower %>% 
+  select(ws_id, gridcode)  %>% 
+  group_by(ws_id)
+selected_diff_2060s6_higher <- sedex_diff_2060s6_higher %>% 
+  select(ws_id, gridcode)  %>% 
+  group_by(ws_id)
+selected_diff_2060s6_lower <- sedex_diff_2060s6_lower %>% 
+  select(ws_id, gridcode) %>% 
+  group_by(ws_id)
+
+
+#put all data frames into list
+df_list <- list(sedex_diff_2040s1_higher, selected_diff_2040s1_lower, selected_diff_2040s6_higher,selected_diff_2040s6_lower,selected_diff_2060s1_higher,selected_diff_2060s1_lower,selected_diff_2060s6_higher,selected_diff_2060s6_lower)    
+
+#merge all data frames together
+joined_df <- df_list %>% 
+  reduce(full_join, by='ws_id')
+
+colnames(joined_df) <- c("wsID", "Watershed_Name", "area_km2", "area_acres", "sedex_diff_2040s1_higher", "sedex_diff_2040s1_lower", "sedex_diff_2040s6_higher", "sedex_diff_2040s6_lower", "sedex_diff_2060s1_higher", "sedex_diff_2060s1_lower", "sedex_diff_2060s6_higher", "sedex_diff_2060s6_lower")
+
+sed_diffonly_2040 <- joined_df %>% 
+  select(wsID, Watershed_Name, sedex_diff_2040s1_higher, sedex_diff_2040s1_lower, sedex_diff_2040s6_higher, sedex_diff_2040s6_lower)
+
+sed_diffonly_2060 <- joined_df %>% 
+  select(wsID, Watershed_Name, sedex_diff_2060s1_higher, sedex_diff_2060s1_lower, sedex_diff_2060s6_higher, sedex_diff_2060s6_lower)
+```
+
+```{r}
+#create tables via kable
+table_2040 <- sed_diffonly_2040 %>% kable(col.names = c("Watershed ID", 
+                                    "Subwatershed Name", "Sediment Export Difference Scenario 1 High (tons)" , 
+                                    "Sediment Export Difference Scenario 1 Low (tons)", 
+                                    "Sediment Export Difference Scenario 6 High (tons)", 
+                                    "Sediment Export Difference Scenario 6 Low (tons)"),
+                        caption = "2040 Scenarios & Replicates",
+                        format.args = list(decimal.mark = '.', big.mark = ","),
+                        escape = F) %>% 
+  kable_styling(bootstrap_options = c("striped", "bordered", "condensed"),
+                full_width = FALSE) %>% 
+  kable_classic("basic", html_font = "Georgia") %>% 
+  row_spec(0, background = "lightgray", bold = T) 
+
+table_2040
+```
+
+```{r}
+#create tables via kable
+table_2060 <- sed_diffonly_2060 %>% kable(col.names = c("Watershed ID", 
+                                    "Subwatershed Name", "Sediment Export Difference Scenario 1 High (tons)" , 
+                                    "Sediment Export Difference Scenario 1 Low (tons)", 
+                                    "Sediment Export Difference Scenario 6 High (tons)", 
+                                    "Sediment Export Difference Scenario 6 Low (tons)"),
+                        caption = "2060 Scenarios & Replicates",
+                        format.args = list(decimal.mark = '.', big.mark = ","),
+                        escape = F) %>% 
+  kable_styling(bootstrap_options = c("striped", "bordered", "condensed"),
+                full_width = FALSE) %>% 
+  kable_classic("basic", html_font = "Georgia") %>% 
+  row_spec(0, background = "lightgray", bold = T) 
+
+table_2060
+```
+
+```{r}
+watershed_info <- sedex_diff_2040s1_higher %>% 
+  select(ws_id, dam_waters, area_km2) %>% 
+  as.data.frame() %>% 
+  arrange(ws_id)
+
+table_watershed_info <- watershed_info %>% kable(col.names = c("Watershed ID",
+                                    "Subwatershed Name", 
+                                    "Area in TCSI (km<sup>2</sup>)"),
+                        caption = "Dam Watershed Information",
+                        format.args = list(decimal.mark = '.', big.mark = ","),
+                        escape = F) %>% 
+  kable_styling(bootstrap_options = c("striped", "bordered", "condensed"),
+                full_width = FALSE) %>% 
+  kable_classic("basic", html_font = "Georgia") %>% 
+  row_spec(0, background = "lightgray", bold = T) 
+
+table_watershed_info
+```
+
+```{r}
+
+#export the tables
+
+save_kable(table_2040, file = "sedex_diff_damws_2040table.png", self_contained = TRUE)
+
+save_kable(table_2060, file = "sedex_diff_damws_2060table.png", self_contained = TRUE)
+
+save_kable(table_watershed_info, file = "watershedinfo_damws.png", self_contained = TRUE)
+
+```
+

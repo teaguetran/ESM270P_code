@@ -1,0 +1,227 @@
+---
+title: "scenario_diff_usethis"
+author: "Teague Tran"
+date: "2/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(sf)
+library(here)
+library(tidyverse)
+library(janitor)
+library(stars)
+library(rgdal)
+```
+
+```{r}
+raster_2020<-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_v3_20210824_1050_0.tif"))
+raster_2040s1_rep1 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_MIROC_v3_20220216_173442_20.tif")) #2040s1 more (185231)
+raster_2040s1_rep2 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_MIROC_v3_20220216_173447_20.tif")) #2040s1 less (184855)
+raster_2040s6_rep1 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario6_MIROC_v3_20220210_083258_20.tif")) #2040s6 more (194425)
+raster_2040s6_rep2 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario6_MIROC_v3_20220210_083305_20.tif")) #2040s6 less (192080)
+raster_2060s1_rep1 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_MIROC_v3_20220216_173442_40.tif")) #2060s1 less (180790)
+raster_2060s1_rep2 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario1_MIROC_v3_20220216_173447_40.tif")) #2060s1 more (181197)
+raster_2060s6_rep1 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario6_MIROC_v3_20220210_083258_40.tif")) #2060s6 less (180094)
+raster_2060s6_rep2 <-  read_stars(here("data", "cwhr_MIROC5_85_Scenario6_MIROC_v3_20220210_083305_40.tif")) #2060s6 more (180674)
+
+```
+
+```{r}
+#function to merge the two rasters and find the diff between 2020 and projections
+cell_difference <- function(lulc_2020, lulc_2060) {
+  added_rasters <- lulc_2020*10000 + lulc_2060 # add rasters together
+  added_vectorized <- st_as_sf(added_rasters) #vectorize added rasters
+  colnames(added_vectorized) <- c("gridcodes", "geometry") #change column names
+  added_vectorized$gridcodes <-sprintf('%08d', added_vectorized$gridcodes) #make the gridcodes column easier tove parse out
+  merged <- mutate(added_vectorized, gridcode_2020 = substr(added_vectorized$gridcodes, 1, 4)) %>% #create merged dataframe where we can look at forest type and canopy cover
+    mutate(added_vectorized, gridcode_2060 = substr(added_vectorized$gridcodes, 5, 8)) %>% 
+    mutate(forest_type_2020 = substr(gridcode_2020, 1, nchar(gridcode_2020)-2)) %>% #create forest type column for 2020 and 2060
+    mutate(canopy_cover_2020 = as.numeric(gridcode_2020) %% 10) %>% 
+    mutate(forest_type_2060 = substr(gridcode_2060, 1, nchar(gridcode_2060)-2)) %>% #create canopy cover column for 2020 and 2060 
+    mutate(canopy_cover_2060 = as.numeric(gridcode_2060) %% 10) %>% 
+    mutate(forest_diff = as.numeric(forest_type_2060) - as.numeric(forest_type_2020)) %>% #subtract canopy cover and forest type columns for 2020 and 2060
+    mutate(canopy_diff = canopy_cover_2060 - canopy_cover_2020) %>% 
+    mutate(cell_diff = ifelse(as.numeric(canopy_diff) == 0 & as.numeric(forest_diff) == 0, 0, 1)) #create new column where no change = 0 and ANY change = 1 
+}
+
+```
+
+```{r}
+#use cell_difference to calculate the cell differences between 2020 and 2040 replicates
+output_2040s1_rep1 <- cell_difference(raster_2020, raster_2040s1_rep1)
+diff_sum_s1_2040 <- sum(output_2040s1_rep1$cell_diff)
+
+#perform function for rep 2
+output_2040s1_rep2 <- cell_difference(raster_2020, raster_2040s1_rep2)
+diff_sum_new <- sum(output_2040s1_rep2$cell_diff)
+diff_sum_s1_2040 <- rbind(diff_sum_s1_2040, diff_sum_new)
+```
+
+```{r}
+#use cell_difference to calculate the cell differences between 2020 and 2040 replicates
+output_2040s6_rep1 <- cell_difference(raster_2020, raster_2040s6_rep1)
+diff_sum_s6_2040 <- sum(output_2040s6_rep1$cell_diff)
+
+#perform function for rep 2
+output_2040s6_rep2 <- cell_difference(raster_2020, raster_2040s6_rep2)
+diff_sum_new <- sum(output_2040s6_rep2$cell_diff)
+diff_sum_s6_2040 <- rbind(diff_sum_s6_2040, diff_sum_new)
+```
+
+```{r}
+#use cell_difference to calculate the cell differences between 2020 and 2040 replicates
+output_2060s1_rep1 <- cell_difference(raster_2020, raster_2060s1_rep1)
+diff_sum_s1_2060 <- sum(output_2060s1_rep1$cell_diff)
+
+#perform function for rep 2
+output_2060s1_rep2 <- cell_difference(raster_2020, raster_2060s1_rep2)
+diff_sum_new <- sum(output_2060s1_rep2$cell_diff)
+diff_sum_s1_2060 <- rbind(diff_sum_s1_2060, diff_sum_new)
+```
+
+```{r}
+#use cell_difference to calculate the cell differences between 2020 and 2040 replicates
+output_2060s6_rep1 <- cell_difference(raster_2020, raster_2060s6_rep1)
+diff_sum_s6_2060 <- sum(output_2060s6_rep1$cell_diff)
+
+#perform function for rep 2
+output_2060s6_rep2 <- cell_difference(raster_2020, raster_2060s6_rep2)
+diff_sum_new <- sum(output_2060s6_rep2$cell_diff)
+diff_sum_s6_2060 <- rbind(diff_sum_s6_2060, diff_sum_new)
+```
+
+```{r}
+lulc_parse <-  function(raw_raster) {
+  #vectorize raster to be able to perform the habitat quality table fix
+lulc_vector <- st_as_sf(raw_raster[1], merge = FALSE, as_points = F)
+#set crs to NAD83 UTM zone 10
+st_crs(lulc_vector) <- 3310
+#set column names to grid code and geometry
+colnames(lulc_vector) <- c("gridcode", "geometry")
+
+#put scenario vector into lulc_select to be able to break apart lulc code 
+lulc_select <- lulc_vector
+
+#let's break apart landuse stuff 
+lulc_sep <- lulc_select %>% 
+  mutate(last_2 = lulc_select$gridcode %% 100) %>%
+  mutate(first_two = substr(lulc_select$gridcode, 1, nchar(lulc_select$gridcode)-2 )) 
+
+#separate the number in the gridcode to create new columns
+lulc_sep <- lulc_sep %>% 
+  mutate(second_last = substr(lulc_sep$last_2, 1, 1) ) %>% 
+  mutate(first_last = lulc_select$gridcode %% 10) %>% 
+  mutate(forest_type = as.numeric(first_two)) %>% 
+  mutate(seral_stage = second_last) %>% 
+  mutate(canopy_cover = first_last) %>% 
+  mutate(ecoregion_type = as.numeric(forest_type)) #ecoregion type will be the reclassified column of forest types
+  
+#reclassify land use to create new land cover code
+#rename based on the document by TNC: Forest Type
+lulc_sep$forest_type[lulc_sep$forest_type == 0] <- "non-forested"
+lulc_sep$forest_type[lulc_sep$forest_type == 1] <- "aspen"
+lulc_sep$forest_type[lulc_sep$forest_type == 2] <- "montane_hardwood"
+lulc_sep$forest_type[lulc_sep$forest_type == 3] <- "montane_riparian"
+lulc_sep$forest_type[lulc_sep$forest_type == 4] <- "white_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 5] <- "red_fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 6] <- "jeffrey_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 7] <- "ponderosa_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 8] <- "douglas-fir"
+lulc_sep$forest_type[lulc_sep$forest_type == 9] <- "mixed_hardwood_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 10] <- "lodgepole_pine"
+lulc_sep$forest_type[lulc_sep$forest_type == 11] <- "sierra_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 12] <- "sierra_high_elevation_mixed_conifer"
+lulc_sep$forest_type[lulc_sep$forest_type == 13] <- "juniper"
+lulc_sep$forest_type[lulc_sep$forest_type == 14] <- "chapparal"
+#rename based on the document by TNC: Seral Stage
+lulc_sep$seral_stage[lulc_sep$seral_stage == 0] <- "NA"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 1] <- "below_1"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 2] <- "1-6"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 3] <- "6-11"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 4] <- "11-24"
+lulc_sep$seral_stage[lulc_sep$seral_stage == 5] <- "above_24"
+#rename based on the document by TNC: canopy cover
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 0] <- "0-10"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 1] <- "10-25"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 2] <- "25-40"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 3] <- "40-60"
+lulc_sep$canopy_cover[lulc_sep$canopy_cover == 4] <- "60-100"
+
+#change 0-10% canopy cover to non-forested ecoregion; 0-10% canopy cover does not count as forest
+lulc_sep$ecoregion_type <- with(lulc_sep, ifelse(lulc_sep$canopy_cover == "0-10", lulc_sep$ecoregion_type * 0, lulc_sep$ecoregion_type*1))
+
+#reclassify ecoregion_type as non-forest, hardwoods, conifer, or mixed     
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 0 ] <- "non-forest" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type== 14] <- "shrub"
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 1|lulc_sep$ecoregion_type == 2] <- "hardwoods" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 4|lulc_sep$ecoregion_type ==5|lulc_sep$ecoregion_type ==6|lulc_sep$ecoregion_type ==7|lulc_sep$ecoregion_type ==8|lulc_sep$ecoregion_type ==10|lulc_sep$ecoregion_type ==11|lulc_sep$ecoregion_type ==12|lulc_sep$ecoregion_type == 13] <- "conifer" 
+lulc_sep$ecoregion_type[lulc_sep$ecoregion_type == 9 | lulc_sep$ecoregion_type == 3] <- "mixed"
+
+#create land use cover code based on 1 = nonforest, 2 = conifer, 3 = hardwood, 4 = mixed, 5 = shrub
+ lulc_sep <- lulc_sep %>%
+   mutate(landcover_code = ecoregion_type)
+lulc_sep$landcover_code[lulc_sep$landcover_code == "non-forest" ] <- 1
+
+lulc_sep$landcover_code[lulc_sep$landcover_code == "conifer" ] <- 2
+
+lulc_sep$landcover_code[lulc_sep$landcover_code == "hardwoods" ] <- 3
+
+lulc_sep$landcover_code[lulc_sep$landcover_code == "mixed" ] <- 4
+
+lulc_sep$landcover_code[lulc_sep$landcover_code == "shrub" ] <- 5
+
+lulc_sep
+}
+```
+
+```{r}
+raster_2020
+raster_2040s1_rep1  #2040s1 more (185231)
+raster_2040s1_rep2  #2040s1 less (184855)
+raster_2040s6_rep1  #2040s6 more (194425)
+raster_2040s6_rep2  #2040s6 less (192080)
+raster_2060s1_rep1  #2060s1 less (180790)
+raster_2060s1_rep2  #2060s1 more (181197)
+raster_2060s6_rep1  #2060s6 less (180094)
+raster_2060s6_rep2  #2060s6 more (180674)
+```
+
+```{r}
+#use function on 2020 data
+lulc_parsed_2020 <- lulc_parse(raster_2020)
+
+#use function on 2040 data
+lulc_parsed_2040s1_lower <- lulc_parse(raster_2040s1_rep2)
+lulc_parsed_2040s1_higher <- lulc_parse(raster_2040s1_rep1)
+lulc_parsed_2040s6_lower <- lulc_parse(raster_2040s6_rep2)
+lulc_parsed_2040s6_higher <- lulc_parse(raster_2040s6_rep1)
+
+#use function on 2060 data
+lulc_parsed_2060s1_lower <- lulc_parse(raster_2060s1_rep1)
+lulc_parsed_2060s1_higher <- lulc_parse(raster_2060s1_rep2)
+lulc_parsed_2060s6_lower <- lulc_parse(raster_2060s6_rep1)
+lulc_parsed_2060s6_higher <- lulc_parse(raster_2060s6_rep2)
+```
+
+
+```{r}
+#write it out into shape file!
+#st_write(lulc_parsed_2020, "tcsi_landcover_2020_no0s.shp")
+
+#2040
+st_write(lulc_parsed_2040s1_lower, "lulc_2040s1lower_no0s.shp")
+st_write(lulc_parsed_2040s1_higher, "lulc_2040s1higher_no0s.shp")
+st_write(lulc_parsed_2040s6_lower, "lulc_2040s6lower_no0s.shp")
+st_write(lulc_parsed_2040s6_higher, "lulc_2040s6higher_no0s.shp")
+
+#2060
+st_write(lulc_parsed_2060s1_lower, "lulc_2060s1lower_no0s.shp")
+st_write(lulc_parsed_2060s1_higher, "lulc_2060s1higher_no0s.shp")
+st_write(lulc_parsed_2060s6_lower, "lulc_2060s6lower_no0s.shp")
+st_write(lulc_parsed_2060s6_higher, "lulc_2060s6higher_no0s.shp")
+```

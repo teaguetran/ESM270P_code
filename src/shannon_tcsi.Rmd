@@ -1,0 +1,62 @@
+---
+title: "biodiversity_analysis"
+author: "Teague Tran"
+date: "4/15/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(sf)
+library(raster)
+library(tidyverse)
+library(here)
+library(janitor)
+
+options(scipen = 999)
+```
+
+```{r}
+bio_df<- read.csv(here("data","teague_s folder", "biodiversity_table.csv")) %>% 
+  clean_names()
+```
+
+```{r}
+#create new data frame to make it easier to work with
+count_names <- bio_df %>% 
+  select(i_fid, ecrgn_t, name, count)
+
+#group by names and ecoregion type
+grouped_names <- count_names %>% 
+  group_by(name, ecrgn_t) %>% 
+  count()
+
+#create dataframe summing by watershed
+grouped_names_sum = grouped_names %>% 
+  group_by(name) %>% 
+  summarize(sum = sum(n))
+
+#merge the two dataframes
+grouped_names_df <- merge(x = grouped_names, y = grouped_names_sum, by = "name")
+
+grouped_names_df <- grouped_names_df %>% 
+  mutate(proportions = n/sum) %>% 
+  mutate(ln_prop = log(proportions)) %>% 
+  mutate(prop_ln_prop = proportions * ln_prop)
+
+#create dataframe summing the probabilities * ln(probabilities)
+grouped_names_prop = grouped_names_df %>%
+  group_by(name) %>%
+  summarize(shannon = sum(prop_ln_prop) * -1)
+
+#merge the two dataframes
+grouped_names_df <- merge(x = grouped_names_df, y = grouped_names_prop, by = "name")
+
+write.csv(grouped_names_df, "shannon_index.csv")
+```
+
+
+
